@@ -1,6 +1,7 @@
 import pandas as pd
 from django.core.management.base import BaseCommand
 from core.models import Customer, Loan
+from decimal import Decimal, ROUND_HALF_UP
 
 
 class Command(BaseCommand):
@@ -36,12 +37,15 @@ class Command(BaseCommand):
                 try:
                     customer = Customer.objects.get(customer_id=row['customer_id'])
 
+                    # Ensure interest_rate has exactly 2 decimal places
+                    interest_rate = Decimal(str(row['interest_rate'])).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
                     Loan.objects.update_or_create(
                         loan_id=row['loan_id'],
                         defaults={
                             'customer': customer,
                             'loan_amount': row['loan_amount'],
-                            'interest_rate': row['interest_rate'],
+                            'interest_rate': interest_rate,
                             'tenure': row['tenure'],
                             'monthly_payment': row['monthly_payment'],
                             'emi_paid_on_time': row['emis_paid_on_time'],
