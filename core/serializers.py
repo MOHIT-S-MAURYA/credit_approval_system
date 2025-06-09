@@ -1,29 +1,31 @@
+"""
+Serializers for the Credit Approval System API.
+
+This module defines serializers for:
+- Customer registration and detail
+- Loan detail and creation
+- Eligibility checks
+- Listing loans for a customer
+
+Serializers handle validation and transformation between model instances and JSON representations.
+"""
+
 # core/serializers.py
 
 from rest_framework import serializers
 from .models import Customer, Loan
 
 # Serializer for registering a new customer
-class CustomerRegisterSerializer(serializers.Serializer):
-    first_name = serializers.CharField()
-    last_name = serializers.CharField()
-    age = serializers.IntegerField()
-    phone_number = serializers.CharField()
-    monthly_income = serializers.IntegerField()
+class CustomerRegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ['first_name', 'last_name', 'age', 'phone_number', 'monthly_income']
 
     def create(self, validated_data):
         income = validated_data['monthly_income']
         approved_limit = round(36 * income, -5)  # round to nearest lakh
-
-        customer = Customer.objects.create(
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
-            age=validated_data['age'],
-            phone_number=validated_data['phone_number'],
-            monthly_income=income,
-            approved_limit=approved_limit
-        )
-        return customer
+        validated_data['approved_limit'] = approved_limit
+        return super().create(validated_data)
 
     def to_representation(self, instance):
         return {
@@ -112,6 +114,10 @@ class LoanDetailSerializer(serializers.ModelSerializer):
 
 # Serializer for listing loans for a customer
 class CustomerLoanListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing loans associated with a customer.
+    Includes monthly installment and repayments left.
+    """
     monthly_installment = serializers.DecimalField(
         source='monthly_payment',
         max_digits=12,
@@ -130,6 +136,9 @@ class CustomerLoanListSerializer(serializers.ModelSerializer):
         ]
 
     def get_repayments_left(self, obj):
+        """
+        Calculate the number of repayments left for the loan.
+        """
         return obj.tenure - obj.emi_paid_on_time
     
 # Serializer for creating a new loan

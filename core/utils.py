@@ -1,11 +1,85 @@
+"""
+Utility functions for the Credit Approval System.
+
+This module provides:
+- Loan eligibility calculation logic
+- Customer validation helpers
+- EMI calculation and related financial utilities
+
+Business logic is separated from views and serializers for maintainability and reuse.
+"""
+
 from django.db.models import Sum
 from django.db import DatabaseError
 from decimal import Decimal
 import math
 from datetime import datetime
+from rest_framework import status
+from rest_framework.response import Response
+from .models import Customer
+
+
+def get_valid_customer(customer_id):
+    """
+    Retrieve a customer by ID and return a tuple of (customer, error_response).
+    If the customer does not exist, error_response contains a DRF Response object.
+    """
+    try:
+        customer = Customer.objects.get(customer_id=customer_id)
+        if customer.monthly_income <= 0:
+            return None, Response(
+                {"error": "Customer's monthly income is invalid or zero."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if customer.approved_limit <= 0:
+            return None, Response(
+                {"error": "Customer's approved limit is invalid or zero."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return customer, None
+    except Customer.DoesNotExist:
+        return None, Response(
+            {"error": "Customer not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+def calculate_emi(amount: Decimal, rate: Decimal, tenure: int) -> Decimal:
+    """
+    Calculate the monthly EMI for a loan.
+
+    Args:
+        amount (Decimal): Principal loan amount.
+        rate (Decimal): Annual interest rate (percent).
+        tenure (int): Tenure in months.
+
+    Returns:
+        Decimal: Monthly EMI amount.
+    Raises:
+        ValueError: If calculation parameters are invalid.
+    """
+    try:
+        monthly_rate = rate / Decimal('100') / Decimal('12')
+        if monthly_rate == 0:
+            return amount / Decimal(str(tenure))
+        term = (Decimal('1') + monthly_rate) ** tenure
+        if term == 1:
+            return amount / Decimal(str(tenure))
+        emi = amount * monthly_rate * term / (term - Decimal('1'))
+        return emi.quantize(Decimal('0.01'))
+    except (OverflowError, ZeroDivisionError):
+        raise ValueError("Error calculating EMI due to invalid parameters.")
 
 def check_eligibility(customer, loan_amount, interest_rate, tenure):
+    """
+    Determine if a customer is eligible for a loan based on their credit score,
+    current debt, and EMI-to-income ratio.
+    """
     try:
+        # Ensure all numbers are Decimal
+        loan_amount = Decimal(str(loan_amount))
+        interest_rate = Decimal(str(interest_rate))
+        tenure = int(tenure)
+
         # Initialize
         credit_score = Decimal('0')
         approval = False
@@ -35,20 +109,6 @@ def check_eligibility(customer, loan_amount, interest_rate, tenure):
             credit_score = Decimal('100') * (W1 * P + W2 * N_norm + W3 * A_norm + W4 * V_norm)
             credit_score = credit_score.quantize(Decimal('0.01'))
             message = "Loan eligibility calculated."
-
-        # Calculate EMI
-        def calculate_emi(amount, rate, tenure):
-            try:
-                monthly_rate = rate / Decimal('100') / Decimal('12')
-                if monthly_rate == 0:
-                    return amount / Decimal(str(tenure))
-                term = (Decimal('1') + monthly_rate) ** tenure
-                if term == 1:
-                    return amount / Decimal(str(tenure))
-                emi = amount * monthly_rate * term / (term - Decimal('1'))
-                return emi.quantize(Decimal('0.01'))
-            except (OverflowError, ZeroDivisionError):
-                raise ValueError("Error calculating EMI due to invalid parameters.")
 
         # Determine eligibility
         try:
