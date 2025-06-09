@@ -1,4 +1,5 @@
 from django.db import models
+from decimal import Decimal
 
 # Create your models here.
 
@@ -25,6 +26,25 @@ class Loan(models.Model):
     emi_paid_on_time = models.PositiveIntegerField(default=0)
     start_date = models.DateField()
     end_date = models.DateField()
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        if not is_new:
+            # Existing loan update — handle if needed
+            return super().save(*args, **kwargs)
+
+        # New loan: increase customer debt
+        super().save(*args, **kwargs)
+        self.customer.current_debt += self.loan_amount
+        self.customer.save()
+
+    def delete(self, *args, **kwargs):
+        # Reduce customer's current debt before deleting
+        self.customer.current_debt -= self.loan_amount
+        if self.customer.current_debt < Decimal('0.0'):
+            self.customer.current_debt = Decimal('0.0')
+        self.customer.save()
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"Loan {self.loan_id} for Customer {self.customer.customer_id}"
