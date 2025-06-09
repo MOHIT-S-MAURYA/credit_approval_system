@@ -1,5 +1,6 @@
 import pandas as pd
 from django.core.management.base import BaseCommand
+from django.db import connection
 from core.models import Customer, Loan
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -59,6 +60,18 @@ class Command(BaseCommand):
                     ))
 
             self.stdout.write(self.style.SUCCESS("✅ Loans data ingested."))
+
+            # --- Sequence reset automation ---
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT setval(pg_get_serial_sequence('core_customer', 'customer_id'), "
+                    "(SELECT COALESCE(MAX(customer_id), 1) FROM core_customer));"
+                )
+                cursor.execute(
+                    "SELECT setval(pg_get_serial_sequence('core_loan', 'loan_id'), "
+                    "(SELECT COALESCE(MAX(loan_id), 1) FROM core_loan));"
+                )
+            self.stdout.write(self.style.SUCCESS("✅ PostgreSQL sequences reset."))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"❌ Error occurred: {e}"))
