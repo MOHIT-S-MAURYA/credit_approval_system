@@ -18,7 +18,6 @@ from rest_framework import status
 from rest_framework.response import Response
 from .models import Customer
 
-
 def get_valid_customer(customer_id):
     """
     Retrieve a customer by ID and return a tuple of (customer, error_response).

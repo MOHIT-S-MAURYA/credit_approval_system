@@ -1,6 +1,9 @@
 # Use Python base image
 FROM python:3.11
 
+# Install netcat for entrypoint.sh
+RUN apt-get update && apt-get install -y netcat-openbsd
+
 # Set working directory inside container
 WORKDIR /core
 
