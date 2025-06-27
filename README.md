@@ -254,8 +254,6 @@ python manage.py update_customer_debt
 ## Contributing
 Contributions are welcome! Please open issues or submit pull requests for improvements or bug fixes.
 
-## License
-This project is licensed under the MIT License.
 
 ## Contact
 For questions or support, open an issue or contact [MOHIT-S-MAURYA](https://github.com/MOHIT-S-MAURYA).
