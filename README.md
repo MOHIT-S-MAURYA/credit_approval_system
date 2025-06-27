@@ -65,19 +65,19 @@ credit_approval_system/
 ### Docker Setup
 1. **Clone the repository**
    ```sh
-git clone https://github.com/MOHIT-S-MAURYA/credit_approval_system.git
-cd credit_approval_system
-```
+   git clone https://github.com/MOHIT-S-MAURYA/credit_approval_system.git
+   cd credit_approval_system
+   ```
 2. **Start the services**
    ```sh
-docker-compose up --build
-```
-3. **Access the server**
+   docker-compose up --build
+   ```
+3. **Access the server**  
    Visit [http://127.0.0.1:8000](http://127.0.0.1:8000)
 4. **Run management commands inside the container**
    ```sh
-docker exec -it credit_approval_system-web-1 bash
-```
+   docker exec -it credit_approval_system-web-1 bash
+   ```
 
 #### Superuser Credentials (Default)
 - **Username:** admin
